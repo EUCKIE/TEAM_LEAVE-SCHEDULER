@@ -127,3 +127,7 @@ def list_public_holidays(db=Depends(get_db)):
     """
     holidays = db.query(PublicHoliday).order_by(PublicHoliday.date).all()
     return holidays
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000)
