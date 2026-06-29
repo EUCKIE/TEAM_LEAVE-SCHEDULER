@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Leave Scheduler</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        h2 {
+            margin-top: 30px;
+            margin-bottom: 15px;
+            color: #555;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        /* 30-Day Calendar Table */
+        .calendar-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background: #007bff;
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            background: white;
+            height: 40px;
+        }
+
+        .employee-name {
+            text-align: left;
+            font-weight: 500;
+            background: #f9f9f9;
+            min-width: 120px;
+        }
+
+        .on-leave {
+            background: #28a745;
+            color: white;
+            font-weight: 600;
+        }
+
+        .weekend {
+            background: #f0f0f0;
+            color: #999;
+        }
+
+        .public-holiday {
+            background: #ffc107;
+            color: #333;
+        }
+
+        /* Form Section */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        select, input[type="date"], button {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        select, input[type="date"] {
+            width: 100%;
+            background: white;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            border: none;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button.reject {
+            background: #dc3545;
+            padding: 6px 12px;
+            margin-left: 5px;
+            margin-top: 0;
+            width: auto;
+        }
+
+        button.reject:hover {
+            background: #c82333;
+        }
+
+        button.approve {
+            background: #28a745;
+            padding: 6px 12px;
+            margin-right: 5px;
+            margin-top: 0;
+            width: auto;
+        }
+
+        button.approve:hover {
+            background: #218838;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-actions {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 15px;
+        }
+
+        /* Pending Requests List */
+        .request-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            background: #f9f9f9;
+        }
+
+        .request-info {
+            flex: 1;
+        }
+
+        .request-employee {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .request-dates {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .request-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .form-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .request-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .request-actions {
+                width: 100%;
+                margin-top: 10px;
+            }
+
+            button {
+                width: 100%;
+            }
+
+            button.approve, button.reject {
+                width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗓️ Team Leave Scheduler</h1>
+
+        <div id="error" class="error"></div>
+        <div id="success" class="success"></div>
+
+        <!-- Section 1: 30-Day Calendar -->
+        <div class="section">
+            <h2>30-Day Leave Calendar</h2>
+            <div class="calendar-wrapper" id="calendar-container">
+                <div class="loading">Loading calendar...</div>
+            </div>
+        </div>
+
+        <!-- Section 2: Submit Leave Request -->
+        <div class="section">
+            <h2>Submit Leave Request</h2>
+            <form id="leave-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="employee">Employee</label>
+                        <select id="employee" required>
+                            <option value="">Select an employee</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="start-date">Start Date</label>
+                        <input type="date" id="start-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="end-date">End Date</label>
+                        <input type="date" id="end-date" required>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <div></div>
+                    <button type="submit">Submit Request</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Section 3: Pending Requests -->
+        <div class="section">
+            <h2>Pending Requests</h2>
+            <div id="pending-container">
+                <div class="loading">Loading pending requests...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+
+        // Helper functions
+        function showError(message) {
+            const el = document.getElementById('error');
+            el.textContent = message;
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 5000);
+        }
+
+        function showSuccess(message) {
+            const el = document.getElementById('success');
+            el.textContent = message;
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 3000);
+        }
+
+        // Fetch data
+        async function fetchEmployees() {
+            try {
+                const res = await fetch(`${API_URL}/employees`);
+                if (!res.ok) throw new Error('Failed to fetch employees');
+                return await res.json();
+            } catch (err) {
+                showError(err.message);
+                return [];
+            }
+        }
+
+        async function fetchLeaveRequests() {
+            try {
+                const res = await fetch(`${API_URL}/leave-requests`);
+                if (!res.ok) throw new Error('Failed to fetch leave requests');
+                return await res.json();
+            } catch (err) {
+                showError(err.message);
+                return [];
+            }
+        }
+
+        async function fetchPublicHolidays() {
+            try {
+                const res = await fetch(`${API_URL}/public-holidays`);
+                if (!res.ok) throw new Error('Failed to fetch public holidays');
+                return await res.json();
+            } catch (err) {
+                showError(err.message);
+                return [];
+            }
+        }
+
+        // Build calendar table
+        async function buildCalendar() {
+            const employees = await fetchEmployees();
+            const requests = await fetchLeaveRequests();
+            const holidays = await fetchPublicHolidays();
+
+            if (employees.length === 0) {
+                document.getElementById('calendar-container').innerHTML = '<p>No employees found.</p>';
+                return;
+            }
+
+            // Get date range
+            const today = new Date();
+            const dates = [];
+            const holidaySet = new Set(holidays.map(h => h.date));
+
+            for (let i = 0; i < 30; i++) {
+                const date = new Date(today);
+                date.setDate(date.getDate() + i);
+                dates.push(date);
+            }
+
+            // Build table
+            let html = '<table><thead><tr><th>Employee</th>';
+            dates.forEach(date => {
+                const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+                const day = date.getDate();
+                html += `<th>${dayName} ${day}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            employees.forEach(employee => {
+                html += `<tr><td class="employee-name">${employee.name}</td>`;
+                dates.forEach(date => {
+                    const dateStr = date.toISOString().split('T')[0];
+                    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                    const isHoliday = holidaySet.has(dateStr);
+
+                    // Check if employee is on approved leave
+                    const onLeave = requests.some(req =>
+                        req.employee_id === employee.id &&
+                        req.status === 'approved' &&
+                        new Date(req.start_date) <= date &&
+                        new Date(req.end_date) >= date
+                    );
+
+                    let cellClass = '';
+                    let content = '';
+
+                    if (onLeave) {
+                        cellClass = 'on-leave';
+                        content = '✓';
+                    } else if (isHoliday) {
+                        cellClass = 'public-holiday';
+                        content = 'H';
+                    } else if (isWeekend) {
+                        cellClass = 'weekend';
+                        content = '—';
+                    }
+
+                    html += `<td class="${cellClass}">${content}</td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            document.getElementById('calendar-container').innerHTML = html;
+        }
+
+        // Build pending requests list
+        async function buildPendingList() {
+            const requests = await fetchLeaveRequests();
+            const employees = await fetchEmployees();
+
+            const employeeMap = {};
+            employees.forEach(emp => { employeeMap[emp.id] = emp; });
+
+            const pending = requests.filter(req => req.status === 'pending');
+
+            if (pending.length === 0) {
+                document.getElementById('pending-container').innerHTML = '<p>No pending requests.</p>';
+                return;
+            }
+
+            let html = '';
+            pending.forEach(req => {
+                const emp = employeeMap[req.employee_id];
+                const startDate = new Date(req.start_date).toLocaleDateString();
+                const endDate = new Date(req.end_date).toLocaleDateString();
+
+                html += `
+                    <div class="request-item">
+                        <div class="request-info">
+                            <div class="request-employee">${emp?.name || 'Unknown'}</div>
+                            <div class="request-dates">${startDate} → ${endDate}</div>
+                        </div>
+                        <div class="request-actions">
+                            <button class="approve" onclick="approveRequest(${req.id})">Approve</button>
+                            <button class="reject" onclick="rejectRequest(${req.id})">Reject</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('pending-container').innerHTML = html;
+        }
+
+        // Approve/Reject
+        async function approveRequest(id) {
+            try {
+                const res = await fetch(`${API_URL}/leave-requests/${id}/decision`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ decision: 'approved' })
+                });
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || 'Failed to approve');
+                }
+                showSuccess('Request approved!');
+                refresh();
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        async function rejectRequest(id) {
+            try {
+                const res = await fetch(`${API_URL}/leave-requests/${id}/decision`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ decision: 'rejected' })
+                });
+                if (!res.ok) throw new Error('Failed to reject');
+                showSuccess('Request rejected!');
+                refresh();
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        // Submit leave request
+        document.getElementById('leave-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const employeeId = parseInt(document.getElementById('employee').value);
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+
+            try {
+                const res = await fetch(`${API_URL}/leave-requests`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        employee_id: employeeId,
+                        start_date: startDate,
+                        end_date: endDate
+                    })
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || 'Failed to submit request');
+                }
+
+                showSuccess('Leave request submitted!');
+                document.getElementById('leave-form').reset();
+                refresh();
+            } catch (err) {
+                showError(err.message);
+            }
+        });
+
+        // Initialize employee dropdown
+        async function initializeForm() {
+            const employees = await fetchEmployees();
+            const select = document.getElementById('employee');
+            employees.forEach(emp => {
+                const option = document.createElement('option');
+                option.value = emp.id;
+                option.textContent = `${emp.name} (${emp.team})`;
+                select.appendChild(option);
+            });
+        }
+
+        // Set minimum date to today
+        function setMinDate() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('start-date').min = today;
+            document.getElementById('end-date').min = today;
+        }
+
+        // Refresh all data
+        async function refresh() {
+            await buildCalendar();
+            await buildPendingList();
+        }
+
+        // Initialize on load
+        async function init() {
+            setMinDate();
+            await initializeForm();
+            await refresh();
+        }
+
+        init();
+    </script>
+</body>
+</html>
